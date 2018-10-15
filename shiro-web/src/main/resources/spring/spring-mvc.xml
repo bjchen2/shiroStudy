@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--该文件在web.xml中引用-->
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:conext="http://www.springframework.org/schema/context"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context
+       http://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/aop
+       http://www.springframework.org/schema/aop/spring-aop.xsd
+       http://www.springframework.org/schema/mvc
+       http://www.springframework.org/schema/mvc/spring-mvc.xsd">
+
+    <!--扫描controller包-->
+    <conext:component-scan base-package="com.controller"/>
+
+    <!--自动注册mvc注解需要的bean-->
+    <mvc:annotation-driven/>
+
+    <!--将静态资源映射为url，使其能通过url访问，不然直接访问localhost:8080/index.html会出现404报错-->
+    <mvc:resources mapping="/*" location="/" />
+
+    <!--开启aop-->
+    <aop:config proxy-target-class="true" />
+
+    <!--保证shiro lifeCycle执行的对象-->
+    <bean class="org.apache.shiro.spring.LifecycleBeanPostProcessor"/>
+
+    <!--配置shiro授权生效对象-->
+    <bean class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">
+        <property name="securityManager" ref="securityManager"/>
+    </bean>
+</beans>

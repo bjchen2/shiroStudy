@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--该文件在web.xml中引用-->
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <import resource="spring-dao.xml"/>
+    <import resource="spring-redis.xml"/>
+    <context:component-scan base-package="com"/>
+
+    <!--创建自定义的filter-->
+    <bean class="com.filter.RolesOrFilter" id="rolesOrFilter"/>
+
+    <!--shiro所需bean-->
+    <bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+        <!--配置securityManager对象-->
+        <property name="securityManager" ref="securityManager"/>
+        <!--登录的URL-->
+        <property name="loginUrl" value="login.html"/>
+        <!--未认证跳转URL-->
+        <property name="unauthorizedUrl" value="403.html" />
+        <!--配置自定义filter-->
+        <property name="filters">
+            <util:map>
+                <entry key="rolesOr" value-ref="rolesOrFilter"/>
+            </util:map>
+        </property>
+        <!--过滤器链-->
+        <property name="filterChainDefinitions">
+            <!--优先级由上往下减小-->
+            <value>
+                <!--anon表示不需要权限校验就能访问-->
+                /login.html = anon
+                /subLogin = anon
+                <!--如果用shiro给定的roles[]关键字则是并的效果，而非或-->
+                /testByXml = rolesOr["boys","admin"]
+                <!--authc表示需要校验通过才能访问-->
+                /* = authc
+            </value>
+        </property>
+    </bean>
+
+    <!--创建shiro securityManager对象,注意：不是DefaultSecurityManager，而是 DefaultWebSecurityManager-->
+    <bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+        <!--将realm对象配置进来-->
+        <property name="realm" ref="realm" />
+        <!--将sessionManager对象配置进来-->
+        <property name="sessionManager" ref="sessionManager"/>
+        <!--将cacheManager对象配置进来-->
+        <property name="cacheManager" ref="cacheManager" />
+        <!--将rememberMeManager对象配置进来-->
+        <property name="rememberMeManager" ref="cookieRememberMeManager"/>
+    </bean>
+
+    <!--创建shiro realm对象-->
+    <bean id="realm" class="com.shiro.realm.CustomRealm">
+        <!--设置加密对象-->
+        <property name="credentialsMatcher" ref="credentialsMatcher"/>
+    </bean>
+
+    <!--创建shiro 加密对象-->
+    <bean id="credentialsMatcher" class="org.apache.shiro.authc.credential.HashedCredentialsMatcher">
+        <!--设置加密的算法-->
+        <property name="hashAlgorithmName" value="md5"/>
+        <!--设置加密次数-->
+        <property name="hashIterations" value="1"/>
+    </bean>
+
+    <!--创建sessionManage对象，实现session会话管理，记住配置到SecurityManager中-->
+    <bean class="com.session.CustomSessionManager" id="sessionManager">
+        <!--配置自定义的sessionDao-->
+        <property name="sessionDAO" ref="redisSessionDao"/>
+    </bean>
+
+    <!--引入自定义的sessionDao-->
+    <bean class="com.session.RedisSessionDao" id="redisSessionDao"/>
+
+    <!--创建cacheManage对象，实现缓存管理，记住配置到SecurityManager中-->
+    <bean class="com.cache.RedisCacheManager" id="cacheManager" />
+
+    <!--创建CookieRememberMeManager对象，实现自动登录功能，记住配置到SecurityManager中-->
+    <bean class="org.apache.shiro.web.mgt.CookieRememberMeManager" id="cookieRememberMeManager">
+        <property name="cookie" ref="simpleCookie"/>
+    </bean>
+
+    <bean class="org.apache.shiro.web.servlet.SimpleCookie" id="simpleCookie">
+        <!--设置cookie的name-->
+        <constructor-arg value="rememberMe"/>
+        <!--设置cookie有效时间，单位：s-->
+        <property name="maxAge" value="600"/>
+    </bean>
+</beans>
